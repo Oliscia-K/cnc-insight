@@ -1,15 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import getGraphOption from "../helperFunctions/getGraphOptions";
+import { useRouter } from 'next/navigation';
+import { useGraphOptions } from "../context/GraphOptionsContext";
 
 export default function FileUploadPage() {
 	const [file, setFile] = useState(null);
 	const [status, setStatus] = useState("");
-	const [uploadedUrl, setUploadedUrl] = useState(null);
-
+	const router = useRouter();
+	const { setGraphOptions } = useGraphOptions();
 	function handleChange(e) {
 		setFile(e.target.files?.[0] ?? null);
-		setUploadedUrl(null);
 		setStatus("");
 	}
 
@@ -37,8 +39,13 @@ export default function FileUploadPage() {
 
 			const body = await res.json();
 			if (!res.ok) throw new Error(body?.error || "Upload failed");
-			setUploadedUrl(body.url);
+            console.log("Upload response:", body);
 			setStatus("Upload complete");
+			const graphOptions = getGraphOption(body);
+			// save to global state so /graphInput can read it
+			setGraphOptions(graphOptions);
+			router.push("/graphInput");
+            
 		} catch (err) {
 			console.error(err);
 			setStatus("Upload failed: " + (err.message || err));
@@ -61,14 +68,6 @@ export default function FileUploadPage() {
 				</div>
 			)}
 
-			{uploadedUrl && (
-				<div style={{ marginTop: 12 }}>
-					<strong>Uploaded:</strong>{" "}
-					<a href={uploadedUrl} target="_blank" rel="noreferrer">
-						{uploadedUrl}
-					</a>
-				</div>
-			)}
 		</div>
 	);
 }

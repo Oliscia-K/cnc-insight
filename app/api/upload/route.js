@@ -41,14 +41,45 @@ export async function POST(req) {
 
     const buffer = Buffer.from(base64, "base64");
 
-    const insert = await pool.query(
+    /*const insert = await pool.query(
       `INSERT INTO files (filename, content_type, data) VALUES ($1, $2, $3) RETURNING id`,
       [safeName, contentType, buffer]
     );
 
     const id = insert.rows[0].id;
-    const publicUrl = `/api/file/${id}`;
-    return new Response(JSON.stringify({ id, url: publicUrl }), {
+    const publicUrl = `/api/file/${id}`;*/
+
+    // Call external R plumber API (/parse) with multipart/form-data
+    const R_BASE = process.env.R_API_URL || "http://127.0.0.1:19306";
+    let rResult = null;
+    try {
+      const form = new FormData();
+      // Create a Blob from the file buffer so FormData can send it with a filename
+      const blob = new Blob([buffer], { type: contentType || "application/octet-stream" });
+      form.append("input_file", blob, safeName);
+
+      const rRes = await fetch(`${R_BASE}/parse`, {
+        method: "POST",
+        body: form,
+      });
+
+      if (!rRes.ok) {
+        const text = await rRes.text();
+        console.error("R API returned non-OK:", rRes.status, text);
+      } else {
+        // try to parse JSON result; if not JSON, leave rResult null
+        try {
+          rResult = await rRes.json();
+        } catch (e) {
+          rResult = await rRes.text();
+        }
+        console.log("R API result:", rResult);
+      }
+    } catch (err) {
+      console.error("Failed to call R API:", err);
+    }
+
+    return new Response(JSON.stringify(rResult), {
       status: 200,
       headers: { "content-type": "application/json" },
     });
