@@ -42,3 +42,23 @@ export async function GET(req, { params }) {
     return new Response(JSON.stringify({ error: "failed to retrieve file" }), { status: 500, headers: { "content-type": "application/json" } });
   }
 }
+
+export async function DELETE(req, { params }) {
+  try {
+    const resolvedParams = await params;
+    const id = resolvedParams.id;
+    if (!id) {
+      return new Response(JSON.stringify({ error: "id required" }), { status: 400, headers: { "content-type": "application/json" } });
+    }
+
+    const result = await pool.query(`DELETE FROM files WHERE id = $1 RETURNING id`, [id]);
+    if (result.rowCount === 0) {
+      return new Response(JSON.stringify({ error: "not found" }), { status: 404, headers: { "content-type": "application/json" } });
+    }
+
+    return new Response(null, { status: 204 });
+  } catch (err) {
+    console.error("app/api/file DELETE error:", err);
+    return new Response(JSON.stringify({ error: "failed to delete file" }), { status: 500, headers: { "content-type": "application/json" } });
+  }
+}

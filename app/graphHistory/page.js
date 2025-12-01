@@ -27,11 +27,9 @@ export default function GraphHistoryPage() {
       setFiles(body.files || []);
       setFilters(body.filters || []);
 
-      // derive unique sections & attributes for dropdowns
+      // derive unique sections for dropdowns
       const uniqueSections = Array.from(new Set((body.filters || []).map((f) => f.section_name))).filter(Boolean);
-      const uniqueAttributes = Array.from(new Set((body.filters || []).map((f) => f.attribute_name))).filter(Boolean);
       setSections(uniqueSections);
-      setAttributes(uniqueAttributes);
     } catch (err) {
       console.error(err);
       setError(err.message || "Failed to load");
@@ -49,6 +47,21 @@ export default function GraphHistoryPage() {
     // refetch when filters change
     fetchGraphs(selectedSection, selectedAttribute);
   }, [selectedSection, selectedAttribute]);
+
+  // Recompute attributes list based on selected section and available filters
+  useEffect(() => {
+    const list = (filters || [])
+      .filter((f) => (selectedSection ? f.section_name === selectedSection : true))
+      .map((f) => f.attribute_name)
+      .filter(Boolean);
+    const uniqueAttributes = Array.from(new Set(list));
+    setAttributes(uniqueAttributes);
+
+    // if currently selected attribute is no longer available for this section, clear it
+    if (selectedAttribute && !uniqueAttributes.includes(selectedAttribute)) {
+      setSelectedAttribute("");
+    }
+  }, [filters, selectedSection, selectedAttribute]);
 
   return (
     <div style={{ padding: 20 }}>
@@ -106,7 +119,24 @@ export default function GraphHistoryPage() {
               />
             </div>
             <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between" }}>
-              <a href={file.url} target="_blank" rel="noreferrer">Open</a>
+              <button
+                onClick={async () => {
+                  const ok = window.confirm("This will permanently delete the image. Would you like to continue?");
+                  if (!ok) return;
+                  try {
+                    const res = await fetch(`/api/file/${file.id}`, { method: "DELETE" });
+                    if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+                    // remove from local list
+                    setFiles((prev) => prev.filter((p) => p.id !== file.id));
+                  } catch (err) {
+                    console.error(err);
+                    alert("Failed to delete image: " + (err.message || err));
+                  }
+                }}
+                style={{ color: "#b91c1c", background: "transparent", border: "none", cursor: "pointer" }}
+              >
+                Delete
+              </button>
               <a href={file.url} download={`plot_${file.id}.png`}>Download</a>
             </div>
           </div>
