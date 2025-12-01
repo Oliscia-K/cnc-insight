@@ -6,8 +6,9 @@ const GraphOptionsContext = createContext(null);
 
 export function GraphOptionsProvider({ children }) {
   const [graphOptions, setGraphOptions] = useState(null);
+  const [parsedJson, setParsedJson] = useState(null);
   return (
-    <GraphOptionsContext.Provider value={{ graphOptions, setGraphOptions }}>
+    <GraphOptionsContext.Provider value={{ graphOptions, setGraphOptions, parsedJson, setParsedJson }}>
       {children}
     </GraphOptionsContext.Provider>
   );

@@ -73,7 +73,6 @@ export async function POST(req) {
         } catch (e) {
           rResult = await rRes.text();
         }
-        console.log("R API result:", rResult);
       }
     } catch (err) {
       console.error("Failed to call R API:", err);

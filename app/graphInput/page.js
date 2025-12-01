@@ -4,10 +4,11 @@ import { useGraphOptions } from "../context/GraphOptionsContext";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import JsonViewer from "../components/JsonViewer";
 
 export default function GraphInput() {
     const router = useRouter();
-    const { graphOptions, setGraphOptions } = useGraphOptions();
+    const { graphOptions, setGraphOptions, parsedJson } = useGraphOptions();
 
         // process state (user selection). We derive a currentProcess for defaults from graphOptions
         const [process, setProcess] = useState("");
@@ -54,6 +55,7 @@ export default function GraphInput() {
                 body: JSON.stringify(options),
             });
             if (!res.ok) throw new Error("Plot API error");
+
             const blob = await res.blob();
             const url = URL.createObjectURL(blob);
             setImageUrl(url);
@@ -176,6 +178,12 @@ export default function GraphInput() {
             {hasSubmitted && !imageUrl && (
                 <div style={{ marginTop: 24, padding: 16, border: "1px solid #ff6b6b", borderRadius: 8, backgroundColor: "#ffe0e0", color: "#c92a2a" }}>
                     <p>This attribute does not have enough datapoints for a productive histogram</p>
+                </div>
+            )}
+            {parsedJson && typeof parsedJson === "object" && (
+                <div style={{ marginTop: 24 }}>
+                    <h3>Parsed JSON</h3>
+                    <JsonViewer data={parsedJson} />
                 </div>
             )}
         </div>

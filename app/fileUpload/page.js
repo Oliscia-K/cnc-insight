@@ -9,7 +9,7 @@ export default function FileUploadPage() {
 	const [file, setFile] = useState(null);
 	const [status, setStatus] = useState("");
 	const router = useRouter();
-	const { setGraphOptions } = useGraphOptions();
+	const { setGraphOptions, setParsedJson } = useGraphOptions();
 	function handleChange(e) {
 		setFile(e.target.files?.[0] ?? null);
 		setStatus("");
@@ -39,8 +39,10 @@ export default function FileUploadPage() {
 
 			const body = await res.json();
 			if (!res.ok) throw new Error(body?.error || "Upload failed");
-            console.log("Upload response:", body);
+			console.log("Upload response:", body);
 			setStatus("Upload complete");
+			// store the parsed JSON returned by the R /parse endpoint so other pages can use it
+			if (setParsedJson) setParsedJson(body);
 			const graphOptions = getGraphOption(body);
 			// save to global state so /graphInput can read it
 			setGraphOptions(graphOptions);
