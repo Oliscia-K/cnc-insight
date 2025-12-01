@@ -11,20 +11,24 @@ pool = global._pgPool;
 
 export async function GET(req, { params }) {
   try {
-    const id = params.id;
+    // In Next.js route handlers `params` can be a promise; await it before accessing properties
+    const resolvedParams = await params;
+    const id = resolvedParams.id;
     if (!id) {
       return new Response(JSON.stringify({ error: "id required" }), { status: 400, headers: { "content-type": "application/json" } });
     }
-
-    const result = await pool.query(`SELECT filename, content_type, data FROM files WHERE id = $1`, [id]);
+    const result = await pool.query(`SELECT section_name, attribute_name, data, created_at FROM files WHERE id = $1`, [id]);
     if (result.rowCount === 0) {
       return new Response(JSON.stringify({ error: "not found" }), { status: 404, headers: { "content-type": "application/json" } });
     }
 
     const row = result.rows[0];
     const buffer = row.data;
-    const contentType = row.content_type || "application/octet-stream";
-    const filename = row.filename || `file_${id}`;
+    // Table no longer stores filename/content_type; create a sensible filename and default content type
+    const section = row.section_name || "section";
+    const attr = row.attribute_name || "attribute";
+    const filename = `${section}_${attr}_${id}.png`;
+    const contentType = "image/png";
 
     return new Response(buffer, {
       status: 200,
