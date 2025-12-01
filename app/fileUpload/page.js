@@ -55,17 +55,24 @@ export default function FileUploadPage() {
 	}
 
 	return (
-		<div style={{ padding: 20 }}>
-			<h1>Upload a file</h1>
-			<input type="file" onChange={handleChange} />
-			<div style={{ marginTop: 12 }}>
+		<div className=" h-screen w-screen flex flex-col justify-center items-center p-6 bg-black text-zinc-50">
+			<button className="self-start font-bold bg-gray-400 h-9 w-24 rounded-md hover:bg-gray-200 p-2" onClick={() => router.push("/")}>
+                Home
+            </button>
+			<h1 className="font-bold text-2xl mb-8">Upload .OUT File to Process</h1>
+			<input 
+				className="bg-gray-800 rounded-md mb-4 p-2 font-medium hover:bg-gray-600 w-[700px]"
+				type="file" 
+				onChange={handleChange} 
+			/>
+			<div className="bg-white text-black rounded-md p-2 hover:bg-gray-400">
 				<button onClick={handleUpload} disabled={!file}>
 					Upload
 				</button>
 			</div>
 
 			{status && (
-				<div style={{ marginTop: 12 }}>
+				<div className="font-bold text-2xl" style={{ marginTop: 12 }}>
 					<strong>Status:</strong> {status}
 				</div>
 			)}

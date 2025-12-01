@@ -111,64 +111,80 @@ export default function GraphInput() {
     }
 
     return (
-        <div style={{ padding: 20 }}>
-            <h1>Graph Input</h1>
-            <form onSubmit={handleSubmit}>
-                <div style={{ marginBottom: 12 }}>
-                    <label htmlFor="process">Choose a Process:</label>
-                    <br />
-                                <select id="process" name="process" value={currentProcess} onChange={(e) => setProcess(e.target.value)}>
-                                    {(graphOptions?.processes ?? []).map((proc) => (
-                            <option key={proc} value={proc}>
-                                {proc}
-                            </option>
-                        ))}
-                    </select>
+        <div className="w-screen min-h-screen flex flex-col items-center p-6 bg-black text-zinc-50">
+            <button className="self-start font-bold bg-gray-400 h-9 w-24 rounded-md hover:bg-gray-200 p-2" onClick={() => router.push("/")}>
+                Home
+            </button>
+            <h1 className="font-bold text-2xl mb-8">Graph Input</h1>
+            <form className="flex flex-col" onSubmit={handleSubmit}>
+                <div className="flex flex-row gap-6">
+                    <div style={{ marginBottom: 12 }}>
+                        <label className="font-bold" htmlFor="process">Choose a Process:</label>
+                        <br />
+                                    <select className="bg-gray-400 h-9 rounded-md font-bold hover:bg-gray-200" id="process" name="process" value={currentProcess} onChange={(e) => setProcess(e.target.value)}>
+                                        {(graphOptions?.processes ?? []).map((proc) => (
+                                <option key={proc} value={proc}>
+                                    {proc}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div style={{ marginBottom: 12 }}>
+                        <label className="font-bold" htmlFor="attribute">Choose an Attribute:</label>
+                        <br />
+                                    <select className="bg-gray-400 h-9 rounded-md font-bold hover:bg-gray-200" id="attribute" name="attribute" value={attribute || attributesForProcess?.[0] || ""} onChange={(e) => setAttribute(e.target.value)}>
+                                        {(attributesForProcess ?? []).map((attr) => (
+                                <option key={attr} value={attr}>
+                                    {attr}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
 
-                <div style={{ marginBottom: 12 }}>
-                    <label htmlFor="attribute">Choose an Attribute:</label>
-                    <br />
-                                <select id="attribute" name="attribute" value={attribute || attributesForProcess?.[0] || ""} onChange={(e) => setAttribute(e.target.value)}>
-                                    {(attributesForProcess ?? []).map((attr) => (
-                            <option key={attr} value={attr}>
-                                {attr}
-                            </option>
-                        ))}
-                    </select>
+                <div className="flex flex-row gap-6 justify-between">
+                    <div style={{ marginBottom: 12 }}>
+                        <label className="font-bold" htmlFor="startPallet">Start pallet (max: {processPalletCount})</label>
+                        <br />
+                        <input className="w-24 bg-gray-400 rounded-md font-bold text-center" id="startPallet" type="number" min={1} max={processPalletCount} value={startPallet} onChange={(e) => setStartPallet(Number(e.target.value))} />
+                    </div>
+
+                    <div style={{ marginBottom: 12 }}>
+                        <label className="font-bold" htmlFor="totalPallets">Total pallets (max: {Math.max(1, processPalletCount - startPallet + 1)})</label>
+                        <br />
+                        <input className="w-24 bg-gray-400 rounded-md font-bold text-center" id="totalPallets" type="number" min={1} max={Math.max(1, processPalletCount - startPallet + 1)} value={totalPallets} onChange={(e) => setTotalPallets(Number(e.target.value))} />
+                    </div>
+
+                    <div style={{ marginBottom: 12 }}>
+                        <label className="font-bold" htmlFor="binSize">Bin size</label>
+                        <br />
+                        <input className="w-24 bg-gray-400 rounded-md font-bold text-center" id="binSize" type="number" min={1} value={binSize} onChange={(e) => setBinSize(Number(e.target.value))} />
+                    </div>
                 </div>
 
-                <div style={{ marginBottom: 12 }}>
-                    <label htmlFor="startPallet">Start pallet</label>
-                    <br />
-                    <input id="startPallet" type="number" min={1} max={processPalletCount} value={startPallet} onChange={(e) => setStartPallet(Number(e.target.value))} />
-                </div>
-
-                <div style={{ marginBottom: 12 }}>
-                    <label htmlFor="totalPallets">Total pallets</label>
-                    <br />
-                    <input id="totalPallets" type="number" min={1} max={Math.max(1, processPalletCount - startPallet + 1)} value={totalPallets} onChange={(e) => setTotalPallets(Number(e.target.value))} />
-                </div>
-
-                <div style={{ marginBottom: 12 }}>
-                    <label htmlFor="binSize">Bin size</label>
-                    <br />
-                    <input id="binSize" type="number" min={1} value={binSize} onChange={(e) => setBinSize(Number(e.target.value))} />
-                </div>
-
-                <div>
-                    <button type="submit">Submit</button>
+                <div className="w-full h-full flex justify-center mt-5">
+                    <button className="font-bold bg-gray-400 h-9 w-28 rounded-md hover:bg-gray-200 p-2" type="submit">Submit</button>
                 </div>
             </form>
             {imageUrl && (
                 <div style={{ marginTop: 24 }}>
                     <h2>Plot Result</h2>
-                    <Image src={imageUrl} alt="Plot" width={3000} height={3000} />
-                    <div style={{ marginTop: 16, padding: 16, border: "1px solid #ccc", borderRadius: 8, backgroundColor: "#f9f9f9" }}>
+                        <div style={{ maxHeight: '50vh', overflowY: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', border: '1px solid #e5e7eb', borderRadius: 8, background: '#fff', padding: 8 }}>
+                            <Image
+                                src={imageUrl}
+                                alt="Plot"
+                                width={3000}
+                                height={3000}
+                                style={{ display: 'block', maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', objectPosition: 'top' }}
+                            />
+                        </div>
+                    <div className="w-full flex justify-center mt-5">
                         <button 
                             onClick={handleSaveImage} 
                             disabled={isSaving}
-                            style={{ padding: "8px 16px", cursor: isSaving ? "not-allowed" : "pointer" }}
+                            style={{ cursor: isSaving ? "not-allowed" : "pointer" }}
+                            className="font-bold bg-gray-400 h-18 w-36 rounded-md hover:bg-gray-200 p-2"
                         >
                             {isSaving ? "Saving..." : "Save Image"}
                         </button>
@@ -181,8 +197,8 @@ export default function GraphInput() {
                 </div>
             )}
             {parsedJson && typeof parsedJson === "object" && (
-                <div style={{ marginTop: 24 }}>
-                    <h3>Parsed JSON</h3>
+                <div className="w-[75%]" style={{ marginTop: 24 }}>
+                    <h3>View Raw Data Table</h3>
                     <JsonViewer data={parsedJson} />
                 </div>
             )}

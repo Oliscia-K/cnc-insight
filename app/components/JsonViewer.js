@@ -7,7 +7,7 @@ function isObject(value) {
 }
 
 function Primitive({ value }) {
-  return <span style={{ color: "#111827" }}>{String(value)}</span>;
+  return <span className="text-black">{String(value)}</span>;
 }
 
 function JsonNode({ data, name }) {
@@ -23,13 +23,13 @@ function JsonNode({ data, name }) {
           <button onClick={() => setOpen((v) => !v)} style={{ marginRight: 8 }}>
             {open ? "▾" : "▸"}
           </button>
-          <strong>{name ?? "Array"}</strong> <span style={{ color: "#6b7280" }}>[{data.length}]</span>
+          <strong>{name ?? "Array"}</strong> <span className="text-black">[{data.length}]</span>
         </div>
         {open && (
           <div style={{ marginLeft: 20, marginTop: 6 }}>
             {data.map((item, idx) => (
               <div key={idx} style={{ marginBottom: 6 }}>
-                <span style={{ color: "#6b7280", marginRight: 8 }}>{idx}:</span>
+                <span className="text-black" style={{ marginRight: 8 }}>{idx}:</span>
                 <JsonNode data={item} />
               </div>
             ))}
@@ -44,10 +44,10 @@ function JsonNode({ data, name }) {
     return (
       <div style={{ fontFamily: "monospace", fontSize: 13 }}>
         <div>
-          <button onClick={() => setOpen((v) => !v)} style={{ marginRight: 8 }}>
+          <button className="text-black" onClick={() => setOpen((v) => !v)} style={{ marginRight: 8 }}>
             {open ? "▾" : "▸"}
           </button>
-          <strong>{name ?? "Object"}</strong> <span style={{ color: "#6b7280" }}>{{}.toString()}</span>
+          <strong className="text-black">{name ?? "Object"}</strong> <span className="text-black">{{}.toString()}</span>
         </div>
         {open && (
           <div style={{ marginLeft: 20, marginTop: 6 }}>
@@ -69,7 +69,16 @@ function JsonNode({ data, name }) {
 
 export default function JsonViewer({ data }) {
   return (
-    <div style={{ padding: 12, border: "1px solid #e5e7eb", borderRadius: 8, background: "#fff" }}>
+    <div
+      style={{
+        padding: 12,
+        border: "1px solid #e5e7eb",
+        borderRadius: 8,
+        background: "#fff",
+        maxHeight: "60vh",
+        overflowY: "auto",
+      }}
+    >
       <JsonNode data={data} />
     </div>
   );

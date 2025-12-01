@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
+import { useRouter } from 'next/navigation';
 
 export default function GraphHistoryPage() {
   const [files, setFiles] = useState([]);
@@ -12,6 +13,7 @@ export default function GraphHistoryPage() {
   const [selectedAttribute, setSelectedAttribute] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const router = useRouter();
 
   async function fetchGraphs(section, attribute) {
     setLoading(true);
@@ -64,13 +66,16 @@ export default function GraphHistoryPage() {
   }, [filters, selectedSection, selectedAttribute]);
 
   return (
-    <div style={{ padding: 20 }}>
-      <h1>Graph History</h1>
+    <div className="w-screen h-screen p-5">
+        <button className="self-start font-bold bg-gray-400 h-9 w-24 rounded-md hover:bg-gray-200 p-2" onClick={() => router.push("/")}>
+            Home
+        </button>
+      <h1 className="text-3xl text-center w-full mb-8">Graph History</h1>
 
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16 }}>
         <div>
           <label style={{ display: "block", fontSize: 12, marginBottom: 6 }}>Section</label>
-          <select value={selectedSection} onChange={(e) => setSelectedSection(e.target.value)} style={{ minWidth: 200 }}>
+          <select className="bg-gray-800 h-9 rounded-md font-bold hover:bg-gray-600" value={selectedSection} onChange={(e) => setSelectedSection(e.target.value)} style={{ minWidth: 200 }}>
             <option value="">All sections</option>
             {sections.map((s) => (
               <option key={s} value={s}>
@@ -82,7 +87,7 @@ export default function GraphHistoryPage() {
 
         <div>
           <label style={{ display: "block", fontSize: 12, marginBottom: 6 }}>Attribute</label>
-          <select value={selectedAttribute} onChange={(e) => setSelectedAttribute(e.target.value)} style={{ minWidth: 200 }}>
+          <select className="bg-gray-800 h-9 rounded-md font-bold hover:bg-gray-600" value={selectedAttribute} onChange={(e) => setSelectedAttribute(e.target.value)} style={{ minWidth: 200 }}>
             <option value="">All attributes</option>
             {attributes.map((a) => (
               <option key={a} value={a}>
@@ -93,7 +98,9 @@ export default function GraphHistoryPage() {
         </div>
 
         <div>
-          <button onClick={() => { setSelectedSection(""); setSelectedAttribute(""); }} style={{ height: 32 }}>
+          <button
+            className="bg-gray-800 h-9 rounded-md font-bold hover:bg-gray-600 px-4"
+           onClick={() => { setSelectedSection(""); setSelectedAttribute(""); }} style={{ height: 32 }}>
             Clear
           </button>
         </div>
@@ -133,11 +140,12 @@ export default function GraphHistoryPage() {
                     alert("Failed to delete image: " + (err.message || err));
                   }
                 }}
-                style={{ color: "#b91c1c", background: "transparent", border: "none", cursor: "pointer" }}
+                style={{ background: "transparent", border: "none", cursor: "pointer" }}
+                className="text-red-600 hover:text-red-300 font-bold"
               >
                 Delete
               </button>
-              <a href={file.url} download={`plot_${file.id}.png`}>Download</a>
+              <a className="text-blue-400 hover:text-blue-200 font-bold" href={file.url} download={`plot_${file.id}.png`}>Download</a>
             </div>
           </div>
         ))}
