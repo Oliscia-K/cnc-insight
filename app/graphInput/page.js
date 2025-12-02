@@ -36,6 +36,9 @@ export default function GraphInput() {
     const [imageBlob, setImageBlob] = useState(null);
     const [hasSubmitted, setHasSubmitted] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    // Track the process/attribute used for the last successful plot
+    const [lastPlotProcess, setLastPlotProcess] = useState("");
+    const [lastPlotAttribute, setLastPlotAttribute] = useState("");
 
         // number of pallets available for the current process (guarded)
         const processPalletCount = graphOptions?.[currentProcess]?.[0] ?? 1;
@@ -68,6 +71,9 @@ export default function GraphInput() {
             setImageUrl(url);
             setImageBlob(blob);
             setHasSubmitted(true);
+            // Save the process/attribute used for this plot
+            setLastPlotProcess(options.section_name);
+            setLastPlotAttribute(options.attribute_name);
         } catch (err) {
             setImageUrl("");
             setImageBlob(null);
@@ -93,9 +99,10 @@ export default function GraphInput() {
                 reader.readAsDataURL(imageBlob);
             });
 
+            // Always use the process/attribute that generated the image
             const payload = {
-                section_name: currentProcess,
-                attribute_name: attribute || attributesForProcess?.[0] || "",
+                section_name: lastPlotProcess,
+                attribute_name: lastPlotAttribute,
                 data: base64,
             };
 
