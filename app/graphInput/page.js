@@ -8,6 +8,13 @@ import JsonViewer from "../components/JsonViewer";
 
 export default function GraphInput() {
     const router = useRouter();
+    function handleHomeClick() {
+        if (window.confirm(
+            "Returning to Home will require you to upload your data file again to create new graphs. Any unsaved graphs will remain unsaved.\n\nDo you want to continue?"
+        )) {
+            router.push("/");
+        }
+    }
     const { graphOptions, setGraphOptions, parsedJson } = useGraphOptions();
 
         // process state (user selection). We derive a currentProcess for defaults from graphOptions
@@ -112,7 +119,7 @@ export default function GraphInput() {
 
     return (
         <div className="w-screen min-h-screen flex flex-col items-center p-6 bg-black text-zinc-50">
-            <button className="self-start font-bold bg-gray-400 h-9 w-24 rounded-md hover:bg-gray-200 p-2" onClick={() => router.push("/")}>
+            <button className="self-start font-bold bg-gray-400 h-9 w-24 rounded-md hover:bg-gray-200 p-2" onClick={handleHomeClick}> 
                 Home
             </button>
             <h1 className="font-bold text-2xl mb-8">Graph Input</h1>
