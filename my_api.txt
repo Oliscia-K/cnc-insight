@@ -1,0 +1,382 @@
+# everytime you open R you need to load the tidyverse library
+library(tidyverse)
+
+library(dplyr)
+library(readr)
+
+# Loading package
+library(plumber)
+
+#* Parse OUT file
+#* @post /parse
+#* @param input_file:file The OUT file to parse
+#* @serializer json
+#* @response 200 A nested JSON structure of parsed OUT file contents
+parse <- function(input_file)
+{
+  tmp <- tempfile(fileext = ".OUT")
+  writeBin(input_file[[1]], tmp)
+  
+  # read_delim expects a connection or string vector
+  M18 <- read_delim(
+    tmp,
+    delim = "\t",
+    escape_double = FALSE,
+    trim_ws = TRUE
+  )
+  
+  
+  
+  # Convert each row to a single string for easier pattern matching
+  rows_as_text <- apply(M18, 1, paste, collapse = " ")
+  
+  # 1. Find all lines that end with NUM X.00000 (any number X)
+  num_markers <- grep("NUM\\s+\\d+\\.00000\\s*$", rows_as_text)
+  
+  # 2. Define global section starts and ends
+  start_rows <- num_markers
+  end_rows <- c(num_markers[-1] - 1, length(rows_as_text))
+  
+  # 3. Find all lines that end with NUM X.00000 (any number X)
+  num_markers <- grep("NUM\\s+\\d+\\.00000\\s*$", rows_as_text)
+  
+  # 4. Find all process marker lines like "P1 OP1", "P2 OP2"
+  process_markers <- grep("^P\\d+\\s+OP\\d+\\s*$", rows_as_text)
+  
+  # 5. Track process number per line (initialize vector)
+  process_ids <- integer(length(rows_as_text))
+  current_process <- 1
+  
+  for (i in seq_along(rows_as_text)) {
+    if (i %in% process_markers) {
+      current_process <- current_process + 1
+    }
+    process_ids[i] <- current_process
+  }
+  
+  # 6. Define section starts and ends using global NUM markers
+  start_rows <- num_markers
+  end_rows <- c(num_markers[-1] - 1, length(rows_as_text))
+  
+  # 7. Filter out any sections where start or end is a process marker line
+  valid_section_indices <- !(start_rows %in% process_markers | end_rows %in% process_markers)
+  start_rows <- start_rows[valid_section_indices]
+  end_rows <- end_rows[valid_section_indices]
+  
+  # 8. Build section metadata
+  sections_df <- data.frame(
+    start = start_rows,
+    end = end_rows,
+    stringsAsFactors = FALSE
+  )
+  
+  # 9. Extract group key: between TIME and NUM
+  sections_df$group_key <- sub(".*TIME \\d+\\s+(.*?)\\s+NUM.*", "\\1", rows_as_text[sections_df$start])
+  
+  # 10. Extract NUM values
+  sections_df$NUM_value <- as.numeric(sub(".*NUM\\s+(\\d+)\\.00000.*", "\\1", rows_as_text[sections_df$start]))
+  
+  # 11. Assign process number using process_ids vector
+  sections_df$process <- process_ids[sections_df$start]
+  
+  # 12. Group by group_key and build section_tables list
+  groups <- unique(sections_df$group_key)
+  section_tables <- list()
+  
+  for (grp in groups) {
+    grp_sections <- sections_df %>% filter(group_key == grp)
+    
+    # Create a data frame with start_row, end_row, NUM_value, and process number
+    num_section_table <- data.frame(
+      start_row = grp_sections$start,
+      end_row = grp_sections$end,
+      NUM_value = grp_sections$NUM_value,
+      process = grp_sections$process
+    )
+    
+    section_tables[[grp]] <- num_section_table
+  }
+  
+  # NOW GROUP BASED ON ATTRIBUTE IN THE PROCESS
+  
+  library(stringr)
+  
+  
+  library(stringr)
+  
+  # Helper: Extract the middle portion of a line
+  extract_middle_string <- function(line) {
+    line <- str_trim(line)
+    
+    if (grepl("^Probe calibration\\s+DATE\\s+\\d+\\s+TIME\\s+\\d+", line, ignore.case = TRUE)) {
+      return("Probe Calibration")
+    }
+    
+    ending_number_pattern <- "[-\\[]?\\d+\\.?\\d*\\]?\\s*$"
+    line_wo_end_num <- sub(ending_number_pattern, "", line)
+    
+    if (grepl("TIME\\s+\\d+", line_wo_end_num)) {
+      middle <- sub(".*TIME\\s+\\d+\\s*", "", line_wo_end_num)
+    } else {
+      middle <- line_wo_end_num
+    }
+    
+    str_trim(middle)
+    str_trim(middle)
+  }
+  
+  # Initialize: nested list by group_key then process
+  parsed_by_section <- list()
+  
+  content_columns_by_group <- list()
+  
+  # Loop through all group keys in section_tables
+  for (group_key in names(section_tables)) {
+    section_df <- section_tables[[group_key]]
+    
+    # For this group, we'll create a list of sections by process
+    process_sections <- list()
+    
+    # Loop through each row in section_df
+    for (i in seq_len(nrow(section_df))) {
+      start <- section_df$start_row[i]
+      end <- section_df$end_row[i]
+      process_num <- section_df$process[i]
+      
+      if ((end - start) < 1) next
+      
+      line_indices <- (start + 1):end
+      lines <- apply(M18[line_indices, ], 1, paste, collapse = " ")
+      
+      column_map <- list()
+      line_map <- list()
+      
+      for (j in seq_along(lines)) {
+        line <- lines[j]
+        line_num <- line_indices[j]
+        middle <- extract_middle_string(line)
+        
+        if (!is.na(middle) && middle != "") {
+          # Initialize if needed
+          if (!middle %in% names(column_map)) {
+            column_map[[middle]] <- list()
+            line_map[[middle]] <- list()
+          }
+          
+          # Store content and line number
+          column_map[[middle]] <- append(column_map[[middle]], line)
+          line_map[[middle]] <- append(line_map[[middle]], line_num)
+        }
+      }
+      
+      # Clean both maps
+      cleaned_content <- lapply(column_map, function(vec) {
+        vec <- unlist(vec)
+        vec[!is.na(vec) & vec != ""]
+      })
+      
+      cleaned_lines <- lapply(line_map, function(vec) {
+        as.integer(unlist(vec))
+      })
+      
+      # Remove empty
+      valid_keys <- names(cleaned_content)[sapply(cleaned_content, length) > 0]
+      cleaned_content <- cleaned_content[valid_keys]
+      cleaned_lines <- cleaned_lines[valid_keys]
+      
+      # Pad both maps to equal length
+      max_len <- max(lengths(cleaned_content))
+      padded_content <- lapply(cleaned_content, function(vec) {
+        length(vec) <- max_len
+        return(vec)
+      })
+      padded_lines <- lapply(cleaned_lines, function(vec) {
+        length(vec) <- max_len
+        return(vec)
+      })
+      
+      # Build wide data frame with *_content and *_line columns
+      content_df <- as.data.frame(padded_content, stringsAsFactors = FALSE)
+      line_df <- as.data.frame(padded_lines, stringsAsFactors = FALSE)
+      
+      # --- NEW: track base columns without "_content" ---
+      base_cols <- colnames(content_df)
+      if (is.null(content_columns_by_group[[group_key]])) {
+        content_columns_by_group[[group_key]] <- base_cols
+      } else {
+        content_columns_by_group[[group_key]] <- union(content_columns_by_group[[group_key]], base_cols)
+      }
+      
+      # Store per-group
+      if (is.null(content_columns_by_group[[group_key]])) {
+        content_columns_by_group[[group_key]] <- base_cols
+      } else {
+        content_columns_by_group[[group_key]] <- union(
+          content_columns_by_group[[group_key]],
+          base_cols
+        )
+      }
+      
+      
+      colnames(line_df) <- paste0(names(line_df), "_line")
+      colnames(content_df) <- paste0(names(content_df), "_content")
+      
+      wide_df <- cbind(line_df, content_df)
+      
+      # Store in nested list: group → process → sections
+      if (is.null(process_sections[[as.character(process_num)]])) {
+        process_sections[[as.character(process_num)]] <- list()
+      }
+      
+      process_sections[[as.character(process_num)]][[length(process_sections[[as.character(process_num)]]) + 1]] <- wide_df
+      
+    }
+    
+    # Attach the process-wise list to the group key
+    parsed_by_section[[group_key]] <- process_sections
+  }
+  saveRDS(parsed_by_section, file = "parsed_cache.rds")
+  #return(jsonlite::toJSON(parsed_by_section, pretty = TRUE, auto_unbox = TRUE))
+  return(list(
+    parsed = parsed_by_section,
+    baseColumns = content_columns_by_group
+  ))
+}
+
+
+
+plot_distributions_overlay <- function(parsed_by_section, 
+                                       section_name, 
+                                       attribute_name, 
+                                       start_index = 1, 
+                                       num_pallets = 1,
+                                       bins = 30) {
+  library(ggplot2)
+  library(stringr)
+  library(scales)
+  library(dplyr)
+  library(patchwork)
+  
+  start_index <- suppressWarnings(as.numeric(start_index))
+  num_pallets <- suppressWarnings(as.numeric(num_pallets))
+  bins <- suppressWarnings(as.numeric(bins))
+  
+  
+  # --- Validate section ---
+  if (!section_name %in% names(parsed_by_section)) {
+    stop(paste("Section", section_name, "not found"))
+  }
+  
+  section_data <- parsed_by_section[[section_name]]
+  process_names <- names(section_data)
+  end_index <- min(start_index + num_pallets - 1, length(process_names))
+  selected_processes <- process_names[start_index:end_index]
+  
+  # --- Extract data ---
+  all_values <- lapply(selected_processes, function(proc) {
+    tbls <- section_data[[proc]]
+    vals <- unlist(lapply(tbls, function(tbl) {
+      col <- grep(paste0("^", attribute_name, "_content$"), names(tbl), value = TRUE)
+      if (length(col) == 0) return(NA)
+      v <- tbl[[col]]
+      v <- str_extract(v, "(-?(?:\\d*\\.\\d+|\\d+))\\]?\\s*$")
+      # --- FIX BROKEN BRACKET ISSUE ---
+      v_clean <- gsub("\\]$", "", v)
+      as.numeric(v_clean); 
+    }))
+    vals <- vals[!is.na(vals)]
+    if (length(vals) == 0) return(NULL)
+    data.frame(Value = vals, Process = proc)
+  })
+  
+  names(all_values) <- selected_processes
+  all_values <- all_values[!sapply(all_values, is.null)]
+  if (length(all_values) == 0) return(NULL)
+  
+  overlay_df <- do.call(rbind, all_values)
+  colors <- hue_pal()(length(selected_processes))
+  
+  overlay_plots <- list()
+  
+  # --- Build plots ---
+  for (i in seq_along(selected_processes)) {
+    current_process <- selected_processes[i]
+    current_color <- colors[i]
+    
+    current_df <- overlay_df %>% filter(Process == current_process)
+    other_df   <- overlay_df %>% filter(Process != current_process)
+    
+    # Compute bin width for the current dataset
+    bin_width <- diff(range(current_df$Value, na.rm = TRUE)) / bins
+    bin_width_label <- paste0("Bin width: ", signif(bin_width, 4))
+    
+    # --- Build plot ---
+    p <- ggplot() +
+      # Each other process as semi-transparent gray histogram (layered)
+      lapply(split(other_df, other_df$Process), function(df) {
+        geom_histogram(
+          data = df, aes(x = Value),
+          bins = bins, fill = "gray80", color = "gray70", alpha = 0.5
+        )
+      }) +
+      # Highlighted process on top
+      geom_histogram(
+        data = current_df, aes(x = Value),
+        bins = bins, fill = current_color, color = "black", alpha = 0.9
+      ) +
+      theme_minimal() +
+      labs(
+        title = paste("Highlighted Process:", i + start_index - 1),
+        subtitle = bin_width_label,
+        x = "Value", y = "Count"
+      ) +
+      theme(legend.position = "none")
+    
+    # Convert the list of gray geoms to layers in the plot
+    p$layers <- unlist(p$layers, recursive = FALSE)
+    
+    overlay_plots[[current_process]] <- p
+  }
+  
+  return(overlay_plots)
+}
+
+#* Plot attribute distributions
+#* @post /plot
+#* @serializer contentType list(type="image/png")
+plot_overlay <- function(section_name="29101_PROBE PART3246", attribute_name="PROBED.3246.DIAM..", start_index = 1, num_pallets = 1, bins = 30) {
+  if (!file.exists("parsed_cache.rds")) stop("Please call /parse first.")
+  
+  start_index <- as.numeric(start_index)
+  num_pallets <- as.numeric(num_pallets)
+  bins <- as.numeric(bins)
+  
+  parsed_data <- readRDS("/Users/olisciathornton/Documents/Design Studio/parsed_cache.rds")
+  
+  plots <- plot_distributions_overlay(parsed_data, section_name, attribute_name, start_index, num_pallets, bins)
+  
+  library(patchwork)
+  combined_plot <- wrap_plots(plots) + plot_layout(ncol = 2)
+  
+  # Render the plot to an in-memory PNG
+  png_file <- tempfile(fileext = ".png")
+  png(png_file, width = 2000, height = 2000, res = 300)
+  print(combined_plot)
+  dev.off()
+  
+  # Return bytes
+  readBin(png_file, what = "raw", n = file.info(png_file)$size)
+  
+}
+
+# Example usage
+# highlighted_plots <- plot_distributions_overlay(parsed_by_section,
+#                                              section_name = "29101_PROBE PART3246",
+#                                              attribute_name = "PROBED.3246.DIAM..",
+#                                              start_index = 1,
+#                                              num_pallets = 10,
+#                                              bins = 30)
+
+# Display all overlay plots
+#wrap_plots(highlighted_plots)
+

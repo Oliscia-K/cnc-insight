@@ -1,0 +1,8 @@
+# Loading package
+library(plumber)
+
+# Routing API
+r <- plumb("api.R")
+
+# Running API
+r$run(port = 8000, swagger = TRUE)
